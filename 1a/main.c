@@ -1,3 +1,11 @@
+/**
+ * @file main.c
+ * @author Tobias Scharsching (12123692)
+ * @brief A program which reads in several files and replaces tabs with spaces
+ * @date 2022-11-02
+ * 
+ */
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -6,6 +14,13 @@
 #include <ctype.h>
 #include <getopt.h>
 
+/**
+ * @brief Processes a stream line by line and replaces tabs with spaces
+ * 
+ * @param inputStream The stream to read from
+ * @param tabSpaces The amount of spaces that are used to replace a tab
+ * @param outputStream The stream to write the processed data to
+ */
 void processStreamTabs(FILE *inputStream, int tabSpaces, FILE *outputStream)
 {
     char *line = NULL;
@@ -41,6 +56,9 @@ void processStreamTabs(FILE *inputStream, int tabSpaces, FILE *outputStream)
                 outputPosition++;
             }
         }
+
+        /* free mem allocated for line */
+        free(line);
     }
 }
 
@@ -65,7 +83,7 @@ int main(int argc, char *argv[])
                 outFile = optarg;
                 break;
             default:
-                printf("unsupported option, exiting\n");
+                fprintf(stderr, "SYNOPSIS:\n   %s [-t tabstop] [-o outfile] [file...]\n", argv[0]);
                 exit(EXIT_FAILURE);
         }
     }
@@ -78,7 +96,7 @@ int main(int argc, char *argv[])
         /* if opened stream is null,  fall back to stdout */
         if (outputStream == NULL)
         {
-            printf(" # output file errored. writing to stdout instead");
+            fprintf(stderr, " - output file errored. writing to stdout instead");
             outputStream = stdout;
         }
     }
@@ -105,17 +123,18 @@ int main(int argc, char *argv[])
                 fclose(fileStream);
                 printf("\n - finished file processing\n");
             }
-            else printf("\n - couldn't open file, skipping\n");
+            else fprintf(stderr, "\n - couldn't open file, skipping\n");
         }
     }
     else {
 
         /* no positional arguments -> read from stdin */
-        printf(" - no input file(s) specified, enter text:\n");
+        printf(" - no input file(s) specified, reading text\n");
         processStreamTabs(stdin, tabDistance, outputStream);
         printf("\n - finished inut processing\n");    
     }
 
     /* close output stream */
     if(outputStream != stdout) fclose(outputStream);
+    return EXIT_SUCCESS;
 }
