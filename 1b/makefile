@@ -2,23 +2,26 @@
 # @author Tobias Scharsching e12123692@student.tuwien.ac.at
 # @date 11.11.2022
 #
-# @brief Makefile for main
+# @brief Makefile for supervisor and generator
 
-CC = gcc
+CC = gcc -g
 DEFS = -D_BSD_SOURCE -D_SVID_SOURCE -D_POSIX_C_SOURCE=200809L
 CFLAGS = -Wall -g -std=c99 -pedantic $(DEFS)
+LDFLAGS = -lrt -pthread
 
-OBJECTS = main.o
 
-.PHONY: all clean
-all: myexpand
+.PHONY: all clean 
+all: generator supervisor
 
-myexpand: $(OBJECTS)
+generator: generator.o
 	$(CC) $(LDFLAGS) -o $@ $^
+
+supervisor: supervisor.o
+	$(CC) $(LDFLAGS) -o $@ $^
+	
+
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-main.o: main.c
-
 clean:
-	rm -rf *.o myexpand
+	rm -rf *.o generator supervisor
