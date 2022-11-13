@@ -8,7 +8,12 @@
  **/
 
 #include <signal.h>
-#include "solutions.c"
+#include <errno.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+#include "solutions.h"
 
 /*
     set up interrupt handler
@@ -19,6 +24,12 @@ static void interrupt(int signal){
 }
 
 int main(int argc, char *argv[]){
+
+    if (argc > 1)
+    {
+        fprintf(stderr, "[%s] ERROR: Too many arguments.\n  SYNOPSIS: %s\n", argv[0], argv[0]);
+        return EXIT_FAILURE;
+    }
 
     /* listen for sigint or sigterm */
     struct sigaction sa = {.sa_handler = interrupt};
@@ -53,33 +64,21 @@ int main(int argc, char *argv[]){
         int i;
         for(i=0; i < solution_length; i++)
         {
-            if (solution[i] != SOLUTION_TERMINATOR && solution[i] != SOLUTION_STARTER) {
-                if (count==0) count++;
-                if (solution[i] == ',') count++;
-            }
+            if (solution[i] == '-') count++; 
         }
         
         /* print solution */
         if (count > 0)
         {
-            printf("[%s] Solution with %d edges: ", argv[0], count);
-            for (i = 0; i < solution_length; i++){
-                if (solution[i] == ',') 
-                {
-                    printf(" ");
-                } 
-                else if (solution[i] != SOLUTION_TERMINATOR && solution[i] != SOLUTION_STARTER)
-                {
-                    printf("%c",solution[i]);
-                }
-            }      
-            printf("\n");
+            printf("[%s] Solution with %d edges: %s\n", argv[0], count, solution);
         }
         else 
         {
             printf("[%s] The graph is 3-colorable!\n", argv[0]);
             terminate = 1;
         }
+
+        free(solution);
     }
 
     /* close shared memory buffer */

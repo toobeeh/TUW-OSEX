@@ -3,9 +3,13 @@
 #include <time.h>
 #include <sys/types.h>
 #include <signal.h>
+#include <errno.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 
-#include "solutions.c"
-#include "graph.c"
+#include "solutions.h"
+#include "graph.h"
 
 /*
     set up interrupt handler
@@ -16,6 +20,11 @@ static void interrupt(int signal){
 }
 
 int main(int argc, char *argv[]){
+
+    if (argc < 2) 
+    {
+        fprintf(stderr, "[%s] ERROR: No edges specified.\n  SYNOPSIS: %s vertice1-vertice2..\n", argv[0], argv[0]);
+    }
 
     /* listen for sigint or sigterm */
     struct sigaction sa = {.sa_handler = interrupt};
@@ -40,8 +49,9 @@ int main(int argc, char *argv[]){
     int res = edges_from_args(argc, argv, &edge_count, &vertices_count, &edges, &vertices);
     if (res == -1)
     {
-        fprintf(stderr, "[%s] ERROR: Could not parse edge list.\n", argv[0]);
+        fprintf(stderr, "[%s] ERROR: Could not parse edge list.\n  SYNOPSIS: %s vertice1-vertice2..\n", argv[0], argv[0]);
         free(edges);
+        free(vertices);
         return EXIT_FAILURE;
     }  
 
@@ -51,6 +61,7 @@ int main(int argc, char *argv[]){
     {
         fprintf(stderr, "[%s] ERROR: Could not open shared memory.\n", argv[0]);
         free(edges);
+        free(vertices);
         return EXIT_FAILURE;
     }
 
@@ -86,6 +97,7 @@ int main(int argc, char *argv[]){
     /* clean ressources */
     close_solution_buffer(solutions, false, writing);
     free(edges);
+    free(vertices);
 
     return success == -1 ? EXIT_FAILURE : EXIT_SUCCESS;
 }

@@ -12,74 +12,48 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <stddef.h> /* for struct */
-#include <stdbool.h> /* for booleans */
 #include <fcntl.h> /* for O_* constants */
 #include <sys/mman.h> /* for shm_open */
 #include <unistd.h> /* for ftruncate */
 #include <sys/types.h> /* for ftruncate */
 #include <stdio.h> /* for memset */
 #include <string.h> /* for memset */
-#include <semaphore.h> /* for semaphores */
+
+#include "solutions.h"
 
 /* ----------       define constants        ---------- */
 
 /**
- * @brief The size of the usable shared memory for saving solutions, in bytes
- */
-#define SOLUTION_DATA_SIZE 1024
-
-/**
  * @brief The name of the shared memory which will be accessed 
  */
-#define SHARED_MEMORY_NAME "12123692_osue_1a_shared_memory" 
+#define SHARED_MEMORY_NAME "12123692_osue_1b_shared_memory" 
 
 /**
  * @brief The name of the semaphore that keeps track of free space
  */
-#define SEMAPHORE_FREE_SPACE "12123692_osue_1a_semaphore_free_space" 
+#define SEMAPHORE_FREE_SPACE "12123692_osue_1b_semaphore_free_space" 
 
 /**
  * @brief The name of the semaphore that keeps track of used space
  */
-#define SEMAPHORE_USED_SPACE "12123692_osue_1a_semaphore_used_space"
+#define SEMAPHORE_USED_SPACE "12123692_osue_1b_semaphore_used_space"
 
 /**
  * @brief The name of the semaphore that prevents from simulatously writing to the circbuffer
  */
-#define SEMAPHORE_BLOCK_WRITE "12123692_osue_1a_semaphore_block_write"
-
-/**
- * @brief A symbol that indicates that a solution sequence has ended or is not present
- */
-#define SOLUTION_TERMINATOR ']'
-
-/**
- * @brief A symbol that has to be first at a solution sequence, to filter out damaged packets
- */
-#define SOLUTION_STARTER '['
-
-/**
- * @brief A symbol that represents no data, = blank
- */
-#define BLANK_SYMBOL '_'
-
+#define SEMAPHORE_BLOCK_WRITE "12123692_osue_1b_semaphore_block_write"
 
 /* ----------       implementation of shared memory       ---------- */
 
 /**
- * @brief struct with pointers to get access to shared memory
+ * @brief size of a solution_memory struct
  */
-struct solution_memory {
-    size_t read_index; /** pointer to current buffer read position */
-    size_t write_index; /** pointer to current buffer write position */ 
-    bool supervisor_available; /** indicator that the supervisor is still waiting for results */
-	char data[SOLUTION_DATA_SIZE]; /** data buffer */ 
-};
-
 static const int SOLUTION_MEMORY_SIZE = sizeof(struct solution_memory); // size of a solution memory struct 
 
 /**
  * @brief opens shared memory for solution read/write access
+ * @details 
+ * uses the constants sahred memory name and -size
  * 
  * @param supervisor indicates whether the caller is a supervisor
  * @param file_descriptor the file descriptor to the shared mem file
@@ -152,6 +126,8 @@ static struct solution_memory *open_solution_memory(bool supervisor, int *file_d
 
 /**
  * @brief Closes a shared solution memory
+ * @details
+ * uses the constants sahred memory name and -size
  * 
  * @param sm the solution memory struct
  * @param supervisor indicates if the calling process is a supervisor
@@ -183,26 +159,9 @@ static int close_solution_memory(struct solution_memory* sm, bool supervisor, in
 
 /* ----------       implementation of solution circular buffer       ---------- */
 
-/**
- * @brief struct that holds data to access and handle the shared solution memory 
- */
-struct solution_circular_buffer {
-    sem_t* semaphore_free_space; // semaphore to lock free space pointer
-    sem_t* semaphore_used_space; // semaphore to lock used space pointer
-    sem_t* semaphore_block_write; // semaphore to lock writing to memory
-    struct solution_memory* memory; // the shared memory struct 
-    int file_descriptor; // file descriptor of the mapped shared memory
-};
-
 static const int SOLUTION_BUFFER_SIZE = sizeof(struct solution_circular_buffer); // size of a solution buffer struct 
 
-/**
- * @brief opens a solution buffer from a shared memory and inits semaphores to access it
- * 
- * @param supervisor indicates if the caller process is the supervisor
- * @return struct solution_circular_buffer* holds semaphores and buffer struct; null if errored
- */
-static struct solution_circular_buffer *open_solution_buffer(bool supervisor)
+struct solution_circular_buffer *open_solution_buffer(bool supervisor)
 {
     /*
         alloc memory for the solution bufer,
@@ -263,14 +222,7 @@ static struct solution_circular_buffer *open_solution_buffer(bool supervisor)
     return solutions;
 }
 
-/**
- * @brief Closes all semaphores of a solution struct and releases its memory
- * 
- * @param solution the solution struct that is to be closed
- * @param supervisor indicates if the caller process is the supervisor
- * @return int indicating success; -1 if cleanup of semaphores or memory was unsuccessful
- */
-static int close_solution_buffer(struct solution_circular_buffer* solutions, bool supervisor, bool writing)
+int close_solution_buffer(struct solution_circular_buffer* solutions, bool supervisor, bool writing)
 {
     /*
         if supervisor is terminating, set flag in shared memory so clients can terminate too 
@@ -313,16 +265,7 @@ static int close_solution_buffer(struct solution_circular_buffer* solutions, boo
     return success;
 }
 
-/**
- * @brief writes a solution in the buffer index
- * @details
- * Writes a solution in the buffer memory, and adds the starter symbol and terminal symbol around it to ensure complete transmission
- * 
- * @param solutions the solution_circular_buffer struct that holds semaphores and the buffer data
- * @param solution the new solution to write in the buffer, excluding starter and terminal symbol!
- * @return int success of the processing if 0, otherwise error occured
- */
-static int put_solution(struct solution_circular_buffer* solutions, char* solution, bool *writing)
+int put_solution(struct solution_circular_buffer* solutions, char* solution, bool *writing)
 {
     /*
         wait until no other processes are writing
@@ -378,25 +321,13 @@ static int put_solution(struct solution_circular_buffer* solutions, char* soluti
     return 0;
 }
 
-/**
- * @brief Reads a solution from the memory solution buffer
- * @details
- * Handles buffer reading; where a correctly written word 
- * has to be surrounded be starter-symbol and terminator-symbol.
- * If a starter symbol occurs without the previous solution being terminated, 
- * the previous word is discarded and the new one taken.
- * This can happen when a generator crashes during sending.
- * 
- * @param solutions struct that holds shared memory, indexes and semaphores to access
- * @return char* the fetched solution, including terminal symbol
- */
-static char* read_solution(struct solution_circular_buffer* solutions, int *solution_len)
+char* read_solution(struct solution_circular_buffer* solutions, int *solution_len)
 {
     /*
         set initial allocation length to 64 and resize if necessairy
     */
     size_t current_length = 0, alloc_length = 64;
-    char* solution = malloc(sizeof(char) * alloc_length);
+    char* solution = malloc(sizeof(char) * alloc_length + 1);
     if (solution == NULL) return NULL;
 
     /*
@@ -437,7 +368,6 @@ static char* read_solution(struct solution_circular_buffer* solutions, int *solu
             free(solution);
             solution = malloc(sizeof(char) * alloc_length);
             solution[0] = SOLUTION_STARTER;
-            printf("new:%s\n", solution);
         }
 
         /*
@@ -457,16 +387,16 @@ static char* read_solution(struct solution_circular_buffer* solutions, int *solu
         check if solution is valid and contains both start and terminating character
     */
     if (solution[0] != SOLUTION_STARTER || solution[current_length] != SOLUTION_TERMINATOR){
-        printf("%s\n", solution);
+        free(solution);
         return NULL;
     } 
 
+    char *result = malloc((--current_length) * sizeof(char));
+    strncpy(result, solution+1, current_length);
+    free(solution);
+
     /* exclude starter and terminator */
-    //*solution++;
     *solution_len = current_length;
 
-    return solution;
+    return result;
 }
-
-
-

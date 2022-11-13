@@ -7,26 +7,11 @@
  * randomly assigning colors and removing edges.
  **/
 
-
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-/**
- * @brief Structure that connects two vertices, independent of drection
- */
-typedef struct edge {
-    int id1;
-    int id2;
-} edge_t;
-
-/**
- * @brief Structure that describes the vertex color
- */
-typedef struct vertex {
-    int id;
-    int color;
-} vertex_t;
+#include "graph.h"
 
 /**
  * @brief Find an edge out of a edge array
@@ -36,10 +21,10 @@ typedef struct vertex {
  * @param id2 the id2 to search for
  * @return index of the edge or -1
  */
-int get_edge(edge_t *edges, int edge_count, int id1, int id2)
+static int get_edge(edge_t *edges, int edge_count, int id1, int id2)
 {
     int i;
-    for (i = 0; i++; i < edge_count)
+    for (i = 0; i < edge_count; i++)
     {
         if (edges[i].id1 == id1 && edges[i].id2 == id2) return i;
         else if (edges[i].id1 == id2 && edges[i].id2 == id1) return i;
@@ -54,7 +39,7 @@ int get_edge(edge_t *edges, int edge_count, int id1, int id2)
  * @param id the id1 to search for
  * @return index of the vertex or -1
  */
-int get_vertex(vertex_t *vertices, int vertices_count, int id)
+static int get_vertex(vertex_t *vertices, int vertices_count, int id)
 {   
     int i;
     for (i=0; i < vertices_count; i++)
@@ -64,13 +49,6 @@ int get_vertex(vertex_t *vertices, int vertices_count, int id)
     return -1;
 }
 
-/**
- * @brief Parses the argv and argc of a program to a vertice and edge array
- * 
- * @param argc arc program arg count
- * @param argv argv program arg vals
- * @return graph with edges and count, if parsing error NULL
- */
 int edges_from_args(int argc, char *argv[], int *edge_count, int *vertices_count, edge_t** _edges, vertex_t** _vertices)
 {
     /* init arrays with max possible size, filled with 0 */
@@ -95,7 +73,7 @@ int edges_from_args(int argc, char *argv[], int *edge_count, int *vertices_count
 
         /* check if edge could be parsed */
         if (left == NULL || right == NULL) {
-            return NULL;
+            return -1;
         }
 
         /* convert to int - precondition that its convertable! */
@@ -142,7 +120,7 @@ int edges_from_args(int argc, char *argv[], int *edge_count, int *vertices_count
     return 0;
 }
 
-static char* solve_3color(edge_t *edges, vertex_t *vertices, int edges_count, int vertices_count, int max_removed_edges, int *removed_edges){
+char* solve_3color(edge_t *edges, vertex_t *vertices, int edges_count, int vertices_count, int max_removed_edges, int *removed_edges){
 
     /*
         set a new random color to each vertex
@@ -183,8 +161,10 @@ static char* solve_3color(edge_t *edges, vertex_t *vertices, int edges_count, in
     /*
         build solution string
     */
-    char *solution = malloc(solution_length);
-    if(solution == NULL) return -1;
+    char *solution = malloc(solution_length + 1);
+    solution[solution_length] = '\0';
+
+    if(solution == NULL) return NULL;
 
     char *ptr = solution;
 
@@ -193,29 +173,9 @@ static char* solve_3color(edge_t *edges, vertex_t *vertices, int edges_count, in
         ptr += sprintf(ptr, "%d", edges[i].id1-1); // decrement because of earlier 0-val-protection
         ptr += sprintf(ptr, "-");
         ptr += sprintf(ptr, "%d", edges[i].id2-1);
-        if (i != removed_length - 1) ptr += sprintf(ptr, ",");
+        if (i != removed_length - 1) ptr += sprintf(ptr, " ");
     }
 
     *removed_edges = removed_length;
     return solution;
 }
-
-/**
- * debugging
- */
-// int main(int argc, char *argv[]){
-
-//     int edge_count;
-//     edge_t *edges = edges_from_args(argc, argv, &edge_count);   
-
-//     /* show edges */
-//     int e;
-//     for (e = 0; e < edge_count; e++)
-//     {
-//         printf("edge %d-%d\n", edges[e].id1, edges[e].id2);
-//     }
-
-//     int removed;
-//     char* msg = solve_3color(edges, edge_count, 8, &removed);
-//     printf("%s %d\n",msg,removed);
-// }

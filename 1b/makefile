@@ -13,10 +13,10 @@ LDFLAGS = -lrt -pthread
 .PHONY: all clean 
 all: generator supervisor
 
-generator: generator.o
+generator: generator.o solutions.o graph.o
 	$(CC) $(LDFLAGS) -o $@ $^
 
-supervisor: supervisor.o
+supervisor: supervisor.o solutions.o
 	$(CC) $(LDFLAGS) -o $@ $^
 	
 
