@@ -59,7 +59,10 @@ void processStreamTabs(FILE *inputStream, int tabSpaces, FILE *outputStream)
 
         /* free mem allocated for line */
         free(line);
+        line = NULL;
     }
+
+    free(line);
 }
 
 int main(int argc, char *argv[])
