@@ -61,7 +61,7 @@ void synopsis(){
  * 
  * @details
  * process id 0 -> no child proces running
- * pipe file descriptor NULL -> no fd open
+ * pipe file descriptor -1 -> no fd open
  * 
  * @return child_proc_t* 
  */
@@ -462,7 +462,7 @@ int main(int argc, char *argv[])
     /* double check if child processes finished with exit status success */
     int child_proc_ret = EXIT_SUCCESS;
     if(sort_left->pid > 0) waitpid(sort_left->pid, &child_proc_ret, 0);
-    if(child_proc_ret == 0 && sort_left->pid > 0) waitpid(sort_right->pid, &child_proc_ret, 0);
+    if(child_proc_ret == EXIT_SUCCESS && sort_right->pid > 0) waitpid(sort_right->pid, &child_proc_ret, 0);
 
     /* finally close all read pipes and free structs */
     cleanup(sort_left, sort_right);
