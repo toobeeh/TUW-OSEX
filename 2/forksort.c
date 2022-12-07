@@ -335,7 +335,7 @@ void cleanup(child_proc_t *child_left, child_proc_t *child_right)
 {
     /* close all pipes */
     close_pipe_ends(child_left, -1, -1);
-    close_pipe_ends(child_left, -1, -1);
+    close_pipe_ends(child_right, -1, -1);
 
     /* free structs */
     free(child_left);
