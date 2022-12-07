@@ -325,6 +325,12 @@ int print_pipes_sorted(child_proc_t *child_left, child_proc_t *child_right)
     return 0;
 }
 
+/**
+ * @brief closes all pipes of child processes and frees their memory
+ * 
+ * @param child_left 
+ * @param child_right 
+ */
 void cleanup(child_proc_t *child_left, child_proc_t *child_right)
 {
     /* close all pipes */
@@ -336,11 +342,34 @@ void cleanup(child_proc_t *child_left, child_proc_t *child_right)
     free(child_right);
 }
 
-
+/**
+ * @brief entry point for forksort
+ * 
+ * @details
+ * main logic for the forksort code.
+ * forksort takes an unlimited number of lines and returns them sorted ascending. 
+ * to achieve this, a variation of mergesort is being executed with 
+ * child processes and pipes to communicate with those.
+ * 
+ * main reads a line from stdin and saves it as first line, which will be processed at the end;
+ * because it's not clear yet if it will be passed to child processes.
+ * each following line is (alternating) passed to one of two child processes via a pipe; 
+ * those child processes are only created if needed (>1 line, >2 lines).
+ * 
+ * as soon as there is an EOF read, the first read line is either passed to a child 
+ * (if there were more than one line at all) or just printed to stdout.
+ * if there were more than one line, the outputs of the child processes - which are sorted -
+ * are read line by line and merged ascending. * 
+ * 
+ * @param argc argument counter, must be exactly 1
+ * @param argv arguments, must be exactly the program name
+ * @return exit code
+ */
 int main(int argc, char *argv[])
 {
 
-    if(DEBUG > 0) printf(stderr, "+ pid %d\n", getpid());
+    /* print process id */
+    if(DEBUG > 0) fprintf(stderr, "+ pid %d\n", getpid());
 
     child_proc_t *sort_left = init_child_proc_details();
     child_proc_t *sort_right = init_child_proc_details();
@@ -430,8 +459,14 @@ int main(int argc, char *argv[])
     /* read lines from the pipes and print the output sorted */
     print_pipes_sorted(sort_left, sort_right);
 
+    /* double check if child processes finished with exit status success */
+    int child_proc_ret = EXIT_SUCCESS;
+    if(sort_left->pid > 0) waitpid(sort_left->pid, &child_proc_ret, 0);
+    if(child_proc_ret == 0 && sort_left->pid > 0) waitpid(sort_right->pid, &child_proc_ret, 0);
+
     /* finally close all read pipes and free structs */
     cleanup(sort_left, sort_right);
 
+    if(child_proc_ret != EXIT_SUCCESS) exit(EXIT_FAILURE);
     exit(EXIT_SUCCESS);
 }
